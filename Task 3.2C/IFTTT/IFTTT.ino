@@ -4,8 +4,8 @@
 
 // Define pins for luminance sensor, LED, and calibration button
 #define LUM_PIN          A3   // Pin for the luminance sensor
-#define LED_PIN          D3   // Pin for the LED indicator
-#define CAL_BTN          D4   // Pin for the calibration button
+#define LED_PIN          3   // Pin for the LED indicator
+#define CAL_BTN          4   // Pin for the calibration button
 
 // Delay times
 #define CAL_SLEEP        30000  // Delay at the end of calibration (time to position the device)
@@ -41,11 +41,13 @@ void loop() {
         digitalWrite(LED_PIN, HIGH);   // Turn on LED
         
         if (luminance >= calibrated_sun && !sun) {
-            Particle.publish("Light_Status", "Sun");   // Publish status if in sunlight
+            Serial.println("Sun");   // Output to the serial monitor
+
+
             sun = true;
         }
         else if (luminance < calibrated_sun && sun) {
-            Particle.publish("Light_Status", "Shade");  // Publish status if in shade
+            Serial.println("Shade"); // Output to the serial monitor
             sun = false;
         }
     }
@@ -70,6 +72,6 @@ void calibrate() {
         delay(LED_BLINK);                  // LED blink interval
     }
     
-    Particle.publish("Light_Status", "Calibrated OK");  // Publish calibration status
+    Serial.println("Calibrated OK"); // Output to the serial monitor
     delay(CAL_SLEEP);  // Delay after calibration
 }
