@@ -41,13 +41,13 @@ void loop() {
         digitalWrite(LED_PIN, HIGH);   // Turn on LED
         
         if (luminance >= calibrated_sun && !sun) {
-            Serial.println("Sun");   // Output to the serial monitor
-
-
+            Serial.print("Light_Status: ");   // Print the label
+            Serial.println("Sun");            // Print the status
             sun = true;
         }
         else if (luminance < calibrated_sun && sun) {
-            Serial.println("Shade"); // Output to the serial monitor
+            Serial.print("Light_Status: ");   // Print the label
+            Serial.println("Shade");          // Print the status
             sun = false;
         }
     }
@@ -72,6 +72,7 @@ void calibrate() {
         delay(LED_BLINK);                  // LED blink interval
     }
     
-    Serial.println("Calibrated OK"); // Output to the serial monitor
+    Serial.print("Light_Status: ");   // Print the label
+    Serial.println("Calibrated OK");  // Print the status
     delay(CAL_SLEEP);  // Delay after calibration
 }
