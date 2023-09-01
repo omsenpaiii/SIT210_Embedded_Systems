@@ -2,77 +2,77 @@
 // Name: Om Tomar
 // Roll No: 2210994882
 
-// Define pins for luminance sensor, LED, and calibration button
-#define LUM_PIN          A3   // Pin for the luminance sensor
-#define LED_PIN          3   // Pin for the LED indicator
-#define CAL_BTN          4   // Pin for the calibration button
+#include <WiFiNINA.h>
+#include <BH1750.h>
+#include <Wire.h>
 
-// Delay times
-#define CAL_SLEEP        30000  // Delay at the end of calibration (time to position the device)
-#define READ_DELAY       1000    // 1-second delay between readings
-#define LED_BLINK        500     // LED blink interval
+// Please enter your sensitive data in the Secret tab
+char ssid[] = "Om";            // Your Wi-Fi network SSID
+char pass[] = "87654321";      // Your Wi-Fi network password
 
-// Declare variables
-int  calibrated_sun;            // Stored value for direct sun luminance
-int  luminance;                 // Current luminance reading
+WiFiClient client;              // Create a WiFi client instance
+BH1750 lightMeter;              // Create an instance of the BH1750 light sensor
 
-bool calibrated;                // Calibration status flag
-bool sun;                       // Sunlight status flag
-
-// Declare functions
-void calibrate();              // Function for calibration
+char   HOST_NAME[] = "maker.ifttt.com"; // IFTTT server hostname
+String PATH_NAME  = "/trigger/lightsensor/with/key/bv-rmgYhrL56VgM_haxZIX"; // IFTTT event path
+String queryString = "?value1=57&value2=25"; // Query parameters for the IFTTT event
 
 void setup() {
-    // Set pin modes
-    pinMode(LED_PIN, OUTPUT);   // Set LED_PIN as output
-    pinMode(CAL_BTN, INPUT);    // Set CAL_BTN as input
-    pinMode(LUM_PIN, INPUT);    // Set LUM_PIN as input
-    
-    sun = false;                 // Initialize sun status as false
-    calibrated = false;          // Initialize calibration status as false
+
+  Serial.begin(9600);
+  Serial.print("START");
+  while (!Serial);
+
+  // Connect to the Wi-Fi network
+  WiFi.begin(ssid, pass);
+  Wire.begin();
+  while (true) {
+    if (client.connect(HOST_NAME, 80)) {
+      // If connected to the server:
+      Serial.println("Connected to server");
+      break;
+    } else {
+      // If not connected, print an error message and retry
+      Serial.println("Connection failed");
+    }
+    delay(500);
+  }
+
+  // Initialize the light sensor
+  lightMeter.begin();
+  Serial.println("Connected to server");
 }
 
 void loop() {
-    luminance = analogRead(LUM_PIN);  // Read luminance value from the sensor
-    
-    if (!calibrated && digitalRead(CAL_BTN) == HIGH) {
-        calibrate();                 // Initiate calibration if button is pressed
-    } else if (calibrated) {
-        digitalWrite(LED_PIN, HIGH);   // Turn on LED
-        
-        if (luminance >= calibrated_sun && !sun) {
-            Serial.print("Light_Status: ");   // Print the label
-            Serial.println("Sun");            // Print the status
-            sun = true;
-        }
-        else if (luminance < calibrated_sun && sun) {
-            Serial.print("Light_Status: ");   // Print the label
-            Serial.println("Shade");          // Print the status
-            sun = false;
-        }
-    }
-    
-    delay(READ_DELAY);  // Delay between readings
-}
+  Serial.print("START");
+  float lux = lightMeter.readLightLevel(); // Read the light level from the sensor
 
-void calibrate() {
-    calibrated = true;     // Set calibration status as true
-    calibrated_sun = 100000;  // Initialize calibrated_sun with a high value
-    
-    for (int i = 0; i < 30; i++) {
-        luminance = analogRead(LUM_PIN);  // Read luminance value
-        
-        if (calibrated_sun > luminance) {
-            calibrated_sun = luminance;   // Update calibrated_sun if current reading is lower
-        }
-        
-        digitalWrite(LED_PIN, HIGH);      // Turn on LED
-        delay(LED_BLINK);                  // LED blink interval
-        digitalWrite(LED_PIN, LOW);       // Turn off LED
-        delay(LED_BLINK);                  // LED blink interval
+  queryString += "?value1=";   // Build the query string
+  queryString += lux;           // Add the light level to the query string
+  Serial.println(queryString);
+
+  if (lux > 500) { // Check if the light level is above a threshold
+
+    // Make an HTTP request to IFTTT
+    // Send HTTP header
+    client.println("GET " + PATH_NAME + queryString + " HTTP/1.1");
+    client.println("Host: " + String(HOST_NAME));
+    client.println("Connection: close");
+    client.println(); // End HTTP header
+
+    while (client.connected()) {
+      if (client.available()) {
+        // Read an incoming byte from the server and print it to the serial monitor
+        char c = client.read();
+        Serial.print(c);
+      }
     }
-    
-    Serial.print("Light_Status: ");   // Print the label
-    Serial.println("Calibrated OK");  // Print the status
-    delay(CAL_SLEEP);  // Delay after calibration
+
+    // The server is disconnected, stop the client
+    client.stop();
+    Serial.println();
+    Serial.println("Disconnected");
+  }
+  queryString = ""; // Clear the query string
+  delay(3000);      // Delay before the next loop iteration
 }
